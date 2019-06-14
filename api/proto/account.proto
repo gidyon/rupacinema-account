@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+option go_package="account";
+
+package rupacinema.account;
+
+import "google/protobuf/empty.proto";
+
+// Profile contains user information
+message Profile {
+    string first_name = 1;
+    string last_name = 2;
+    string phone_number = 3;
+    string email_address = 4;
+    string profile_url = 5;
+    string birth_date = 6;
+    NotificationMethod notification_method = 7;
+    map<string, bool> subscribe_notifications = 8;
+}
+
+// Ways a user receives notification
+enum NotificationMethod {
+    EMAIL_AND_PHONE = 0;
+    EMAIL_ONLY = 1;
+    PHONE_ONLY = 2;
+}
+
+// ProfileSecure contains private account information
+message PrivateProfile{
+    string password = 1;
+    string security_question = 2;
+    string security_answer = 3;
+}
+
+// Facebook is request payload to login with their facebook
+message Facebook {
+    string email = 1;
+    string phone_number = 2;
+}
+
+// Google is request payload to login using their google account
+message Google {
+    string email = 1;
+    string phone_number = 3;
+}
+
+// Phone is request payload to login using phone number
+message Phone {
+    string phone = 1;
+    string password = 2;
+}
+
+// Request to login
+message LoginRequest {
+    // User to use one of the options only.
+    oneof login {
+        Facebook facebook = 1;
+        Google google = 2;
+        Phone phone = 3;
+    }
+}
+
+// LoginResponse contains jwt token on successful login
+message LoginResponse {
+    string token = 1;
+}
+
+// Request to create an account
+message CreateProfileRequest {
+    // request_id to detect duplicate requests
+    string request_id = 1;
+    // User profile information
+    Profile profile = 2;
+    // Private information
+    PrivateProfile private_profile = 3;
+}
+
+// Request to retrive user profile, use either email or phone
+message GetProfileRequest {
+    string email = 1;
+    string phone_number = 2;
+}
+
+// Request to authenticate a user
+message AuthenticateRequest {
+    string email = 1;
+    string phone_number = 2;
+}
+
+// Response from Authenticate request
+message AuthenticateResponse {
+    // whether the user validation was successful
+    bool valid = 1;
+}
+
+// Request to retrieve multiple users resources
+message ListUsersRequest {}
+
+message LoginAdminRequest {
+    string admin_username = 1;
+    string admin_password = 2;
+}
+
+message AuthenticateAdminRequest {
+    string admin_id = 1;
+}
+
+// Manages user account
+service AccountAPI {
+    // Authenticates a user to login into their account
+    rpc Login (LoginRequest) returns (LoginResponse);
+    // Creates a user profile
+    rpc CreateProfile (CreateProfileRequest) returns (google.protobuf.Empty);
+    // Retrieves a user profile
+    rpc GetProfile (GetProfileRequest) returns (Profile);
+    // Authenticates a user token to check if they are logged in or valid user.
+    rpc Authenticate (AuthenticateRequest) returns (AuthenticateResponse);
+    // Lists all user in the database
+    rpc ListUsers (ListUsersRequest) returns (stream Profile);
+    // Admin section
+    rpc LoginAdmin (LoginAdminRequest) returns (LoginResponse);
+    rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateResponse);
+}
