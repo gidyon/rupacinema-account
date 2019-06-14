@@ -82,13 +82,13 @@ message GetProfileRequest {
 }
 
 // Request to authenticate a user
-message AuthenticateRequest {
+message AuthenticateUserRequest {
     string email = 1;
     string phone_number = 2;
 }
 
-// Response from Authenticate request
-message AuthenticateResponse {
+// Response from AuthenticateUser request
+message AuthenticateUserResponse {
     // whether the user validation was successful
     bool valid = 1;
 }
@@ -107,17 +107,17 @@ message AuthenticateAdminRequest {
 
 // Manages user account
 service AccountAPI {
-    // Authenticates a user to login into their account
+    // AuthenticateUsers a user to login into their account
     rpc Login (LoginRequest) returns (LoginResponse);
     // Creates a user profile
     rpc CreateProfile (CreateProfileRequest) returns (google.protobuf.Empty);
     // Retrieves a user profile
     rpc GetProfile (GetProfileRequest) returns (Profile);
-    // Authenticates a user token to check if they are logged in or valid user.
-    rpc Authenticate (AuthenticateRequest) returns (AuthenticateResponse);
+    // AuthenticateUsers a user token to check if they are logged in or valid user.
+    rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateUserResponse);
     // Lists all user in the database
     rpc ListUsers (ListUsersRequest) returns (stream Profile);
     // Admin section
     rpc LoginAdmin (LoginAdminRequest) returns (LoginResponse);
-    rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateResponse);
+    rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateUserResponse);
 }
