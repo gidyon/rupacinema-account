@@ -5,6 +5,8 @@ option go_package="account";
 package rupacinema.account;
 
 import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-swagger/options/annotations.proto";
 
 // Profile contains user information
 message Profile {
@@ -14,8 +16,9 @@ message Profile {
     string email_address = 4;
     string profile_url = 5;
     string birth_date = 6;
-    NotificationMethod notification_method = 7;
-    map<string, bool> subscribe_notifications = 8;
+    string gender = 7;
+    NotificationMethod notification_method = 8;
+    map<string, bool> subscribe_notifications = 9;
 }
 
 // Ways a user receives notification
@@ -34,14 +37,24 @@ message PrivateProfile{
 
 // Facebook is request payload to login with their facebook
 message Facebook {
-    string email = 1;
-    string phone_number = 2;
+    string first_name = 1;
+    string last_name = 2;
+    string phone_number = 3;
+    string email_address = 4;
+    string profile_url = 5;
+    string gender = 6;
+    string birth_date = 7;
 }
 
 // Google is request payload to login using their google account
 message Google {
-    string email = 1;
+    string first_name = 1;
+    string last_name = 2;
     string phone_number = 3;
+    string email_address = 4;
+    string profile_url = 5;
+    string gender = 6;
+    string birth_date = 7;
 }
 
 // Phone is request payload to login using phone number
@@ -66,7 +79,7 @@ message LoginResponse {
 }
 
 // Request to create an account
-message CreateProfileRequest {
+message CreateUserRequest {
     // request_id to detect duplicate requests
     string request_id = 1;
     // User profile information
@@ -76,19 +89,19 @@ message CreateProfileRequest {
 }
 
 // Request to retrive user profile, use either email or phone
-message GetProfileRequest {
+message GetUserRequest {
     string email = 1;
-    string phone_number = 2;
+    string phone = 2;
 }
 
 // Request to authenticate a user
 message AuthenticateUserRequest {
     string email = 1;
-    string phone_number = 2;
+    string phone = 2;
 }
 
 // Response from AuthenticateUser request
-message AuthenticateUserResponse {
+message AuthenticateResponse {
     // whether the user validation was successful
     bool valid = 1;
 }
@@ -96,28 +109,113 @@ message AuthenticateUserResponse {
 // Request to retrieve multiple users resources
 message ListUsersRequest {}
 
+// Admin represents admin user
+message Admin {
+    string first_name = 1;
+    string last_name = 2;
+    string phone_number = 3;
+    string email_address = 4;
+    string user_name = 5;
+    AdminLevel level = 6;
+    repeated string trusted_devices = 7;
+}
+
+// AdminLevel is the administrative level of an admin
+enum AdminLevel {
+    READER = 0; // They can only read
+    READER_AND_ONLY_FOOD = 1; // They read and can only modify food/menu items
+    SUPER_ADMIN = 2; // They are avengers
+}
+
+// Request to login the admin
 message LoginAdminRequest {
-    string admin_username = 1;
-    string admin_password = 2;
+    string username = 1;
+    string password = 2;
 }
 
+// Request to create a new admin
+message CreateAdminRequest {
+    string super_admin_username = 1;
+    Admin new_admin = 2;
+    PrivateProfile admin_private = 3;
+}
+
+// Request to authenticate admin
 message AuthenticateAdminRequest {
-    string admin_id = 1;
+    string username = 1;
 }
 
-// Manages user account
+// Manages user and admin accounts
 service AccountAPI {
-    // AuthenticateUsers a user to login into their account
-    rpc Login (LoginRequest) returns (LoginResponse);
-    // Creates a user profile
-    rpc CreateProfile (CreateProfileRequest) returns (google.protobuf.Empty);
+    // Authenticates a user to login into their account
+    rpc Login (LoginRequest) returns (LoginResponse) {
+        // Login method maps to HTTP POST
+        // Login credentials is mappped into the body of the request
+        option (google.api.http) = {
+            post: "/api/account/users/login"
+            body: "*"
+        };
+    }
+    // Creates a user
+    rpc CreateUser (CreateUserRequest) returns (google.protobuf.Empty) {
+        // CreateUser method maps to HTTP POST 
+        // request_id, profile and private_profile maps to the body of the request
+        option (google.api.http) = {
+            post: "/api/account/users"
+            body: "*"
+        };
+    }
     // Retrieves a user profile
-    rpc GetProfile (GetProfileRequest) returns (Profile);
-    // AuthenticateUsers a user token to check if they are logged in or valid user.
-    rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateUserResponse);
-    // Lists all user in the database
-    rpc ListUsers (ListUsersRequest) returns (stream Profile);
+    rpc GetUser (GetUserRequest) returns (Profile) {
+        // GetUser method maps to HTTP GET
+        // email or phone is mapped into URL query parameters
+        option (google.api.http) = {
+            get: "/api/account/users/profile"
+        };
+    }
+    // Authenticates a user to check if they are logged in and with valid token.
+    rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateResponse) {
+        // AuthenticateUser maps to HTTP POST
+        // email or phone maps to request body
+        option (google.api.http) = {
+            post: "/api/account/users/auth"
+            body: "*"
+        };
+    }
+    // Lists all user in the database. Admins only
+    rpc ListUsers (ListUsersRequest) returns (stream Profile) {
+        // ListUsers maps to HTTP GET
+        // No body.
+        option (google.api.http) = {
+            get: "/api/account/users"
+        };
+    }
     // Admin section
-    rpc LoginAdmin (LoginAdminRequest) returns (LoginResponse);
-    rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateUserResponse);
+    // Authenticates admins when they log in to their account
+    rpc LoginAdmin (LoginAdminRequest) returns (LoginResponse) {
+        // LoginAdmin method maps to HTTP POST
+        // username and password maps to the body of the request
+        option (google.api.http) = {
+            post: "/api/account/admins/login"
+            body: "*"
+        };
+    }
+    // Creates a new admin
+    rpc CreateAdmin (CreateAdminRequest) returns (google.protobuf.Empty) {
+        // CreateAdmin method maps to HTTP POST
+        // Everything maps to the body of the request
+        option (google.api.http) = {
+            post: "/api/account/admins"
+            body: "*"
+        };
+    }
+    // Authenticates admin to check if they are logged in and have valid token
+    rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateResponse) {
+        // Maps to HTTP POST
+        // username maps to request body
+        option (google.api.http) = {
+            post: "/api/account/admins/auth"
+            body: "*"
+        };
+    }
 }
