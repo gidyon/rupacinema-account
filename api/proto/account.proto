@@ -28,14 +28,14 @@ enum NotificationMethod {
     PHONE_ONLY = 2;
 }
 
-// ProfileSecure contains private account information
+// PrivateProfile contains private account information
 message PrivateProfile{
     string password = 1;
     string security_question = 2;
     string security_answer = 3;
 }
 
-// Facebook is request payload to login with their facebook
+// Facebook is request payload to login with facebook account
 message Facebook {
     string first_name = 1;
     string last_name = 2;
@@ -46,7 +46,7 @@ message Facebook {
     string birth_date = 7;
 }
 
-// Google is request payload to login using their google account
+// Google is request payload to login using google account
 message Google {
     string first_name = 1;
     string last_name = 2;
@@ -88,7 +88,10 @@ message CreateUserRequest {
     PrivateProfile private_profile = 3;
 }
 
-// Request to retrive user profile, use either email or phone
+// Request to get the default token
+message GetDefaultTokenRequest {}
+
+// Request to retrive user profile, using either email or phone
 message GetUserRequest {
     string email = 1;
     string phone = 2;
@@ -109,7 +112,7 @@ message AuthenticateResponse {
 // Request to retrieve multiple users resources
 message ListUsersRequest {}
 
-// Admin represents admin user
+// Admin represents administrator user
 message Admin {
     string first_name = 1;
     string last_name = 2;
@@ -140,6 +143,11 @@ message CreateAdminRequest {
     PrivateProfile admin_private = 3;
 }
 
+// Request to get admin profile
+message GetAdminRequest {
+    string user_name = 1;
+}
+
 // Request to authenticate admin
 message AuthenticateAdminRequest {
     string username = 1;
@@ -163,6 +171,13 @@ service AccountAPI {
         option (google.api.http) = {
             post: "/api/account/users"
             body: "*"
+        };
+    }
+    // Retrieves default token for defualt user
+    rpc GetDefaultToken (GetDefaultTokenRequest) returns (LoginResponse) {
+        // GetDefaultToken method maps to HTTP GET
+        option (google.api.http) = {
+            get: "/api/account/token"
         };
     }
     // Retrieves a user profile
@@ -207,6 +222,14 @@ service AccountAPI {
         option (google.api.http) = {
             post: "/api/account/admins"
             body: "*"
+        };
+    }
+    // GetAdmin retrieves an admin profile
+    rpc GetAdmin (GetAdminRequest) returns (Admin) {
+        // GetAdmin maps to HTTP GET
+        // user_name maps to URL path parameter
+        option (google.api.http) = {
+            get: "/api/account/admins/{user_name}"
         };
     }
     // Authenticates admin to check if they are logged in and have valid token
