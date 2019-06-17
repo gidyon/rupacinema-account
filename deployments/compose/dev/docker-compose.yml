@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  mysqldb:
+    image: mysql:latest
+    ports:
+      - "3306"
+    networks: 
+      - bridge-rupa-frontend
+    volumes:
+      - /home/gideon/mysql-storage/rupacinema/all:/var/lib/mysql
+    env_file:
+      - ./.mysql.env
+  
+  rupa_account:
+    image: rupacinema-account:dev
+    build: 
+      context: /home/gideon/go/src/github.com/gidyon/rupacinema/account
+    env_file:
+      - ./.app.env
+      - ./.mysql.env
+    depends_on:
+      - mysqldb
+    ports:
+      - 10093:10093
+    networks: 
+      - bridge-rupa-frontend
+      - bridge-rupa-backend
+
+networks:
+  bridge-rupa-frontend:
+    external: true
+  bridge-rupa-backend:
+    external: true
