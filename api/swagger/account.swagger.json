@@ -96,6 +96,48 @@
         ]
       }
     },
+    "/api/account/admins/{user_name}": {
+      "get": {
+        "summary": "GetAdmin retrieves an admin profile",
+        "operationId": "GetAdmin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountAdmin"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "user_name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/token": {
+      "get": {
+        "summary": "Retrieves default token for defualt user",
+        "operationId": "GetDefaultToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountLoginResponse"
+            }
+          }
+        },
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
     "/api/account/users": {
       "get": {
         "summary": "Lists all user in the database. Admins only",
@@ -253,7 +295,7 @@
           }
         }
       },
-      "title": "Admin represents admin user"
+      "title": "Admin represents administrator user"
     },
     "accountAdminLevel": {
       "type": "string",
@@ -355,7 +397,7 @@
           "type": "string"
         }
       },
-      "title": "Facebook is request payload to login with their facebook"
+      "title": "Facebook is request payload to login with facebook account"
     },
     "accountGoogle": {
       "type": "object",
@@ -382,7 +424,7 @@
           "type": "string"
         }
       },
-      "title": "Google is request payload to login using their google account"
+      "title": "Google is request payload to login using google account"
     },
     "accountLoginAdminRequest": {
       "type": "object",
@@ -455,7 +497,7 @@
           "type": "string"
         }
       },
-      "title": "ProfileSecure contains private account information"
+      "title": "PrivateProfile contains private account information"
     },
     "accountProfile": {
       "type": "object",
