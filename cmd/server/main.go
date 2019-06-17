@@ -24,25 +24,40 @@ func main() {
 		useFlags bool
 	)
 
-	flag.BoolVar(&useFlags, "uflag", false, "Whether to pass config in flags")
+	flag.BoolVar(
+		&useFlags, "uflag", false, "Whether to pass config in flags",
+	)
 	// gRPC section
-	flag.StringVar(&cfg.GRPCPort, "grpc-port", ":9090", "gRPC port to bind")
+	flag.StringVar(
+		&cfg.GRPCPort, "grpc-port", ":5530", "gRPC port to bind",
+	)
 	// DB section
-	flag.StringVar(&cfg.DBHost, "db-host", "127.0.0.1:3308", "Database host")
-	flag.StringVar(&cfg.DBUser, "db-user", "root", "Database user")
-	flag.StringVar(&cfg.DBPassword, "db-password", "hakty11", "Database password")
+	flag.StringVar(
+		&cfg.DBHost, "db-host", "mysqldb", "Database host",
+	)
+	flag.StringVar(
+		&cfg.DBUser, "db-user", "root", "Database user",
+	)
+	flag.StringVar(
+		&cfg.DBPassword, "db-password", "hakty11", "Database password",
+	)
 	// Logging section
-	flag.IntVar(&cfg.LogLevel, "log-level", defaultLogLevel, "Global log level")
+	flag.IntVar(
+		&cfg.LogLevel, "log-level", defaultLogLevel, "Global log level",
+	)
 	flag.StringVar(
 		&cfg.LogTimeFormat, "log-time-format", defaultLogTimeFormat,
 		"Print time format for logger e.g 2006-01-02T15:04:05Z07:00",
 	)
 	// JWT Section
-	flag.StringVar(&cfg.JWTToken, "jwt-token", "", "Token to sign JWT claims")
+	flag.StringVar(
+		&cfg.JWTToken, "jwt-token", "", "Token to sign JWT claims",
+	)
 	// External Services
 	flag.StringVar(
 		&cfg.NotificationServiceAddress,
-		"notification-host", "localhost", "Address of the notification service",
+		"notification-host", "localhost",
+		"Address of the notification service",
 	)
 	flag.StringVar(
 		&cfg.NotificationServicePort,
