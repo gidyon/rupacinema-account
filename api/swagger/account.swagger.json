@@ -1,0 +1,498 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "account.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/account/admins": {
+      "post": {
+        "summary": "Creates a new admin",
+        "operationId": "CreateAdmin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountCreateAdminRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/admins/auth": {
+      "post": {
+        "summary": "Authenticates admin to check if they are logged in and have valid token",
+        "operationId": "AuthenticateAdmin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountAuthenticateResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountAuthenticateAdminRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/admins/login": {
+      "post": {
+        "summary": "Admin section\nAuthenticates admins when they log in to their account",
+        "operationId": "LoginAdmin",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountLoginResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountLoginAdminRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/users": {
+      "get": {
+        "summary": "Lists all user in the database. Admins only",
+        "operationId": "ListUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "$ref": "#/definitions/accountProfile"
+            }
+          }
+        },
+        "tags": [
+          "AccountAPI"
+        ]
+      },
+      "post": {
+        "summary": "Creates a user",
+        "operationId": "CreateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "properties": {}
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountCreateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/users/auth": {
+      "post": {
+        "summary": "Authenticates a user to check if they are logged in and with valid token.",
+        "operationId": "AuthenticateUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountAuthenticateResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountAuthenticateUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/users/login": {
+      "post": {
+        "summary": "Authenticates a user to login into their account",
+        "operationId": "Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountLoginResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountLoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    },
+    "/api/account/users/profile": {
+      "get": {
+        "summary": "Retrieves a user profile",
+        "operationId": "GetUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountProfile"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountAPI"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "accountAdmin": {
+      "type": "object",
+      "properties": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "phone_number": {
+          "type": "string"
+        },
+        "email_address": {
+          "type": "string"
+        },
+        "user_name": {
+          "type": "string"
+        },
+        "level": {
+          "$ref": "#/definitions/accountAdminLevel"
+        },
+        "trusted_devices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "title": "Admin represents admin user"
+    },
+    "accountAdminLevel": {
+      "type": "string",
+      "enum": [
+        "READER",
+        "READER_AND_ONLY_FOOD",
+        "SUPER_ADMIN"
+      ],
+      "default": "READER",
+      "title": "AdminLevel is the administrative level of an admin"
+    },
+    "accountAuthenticateAdminRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        }
+      },
+      "title": "Request to authenticate admin"
+    },
+    "accountAuthenticateResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "format": "boolean",
+          "title": "whether the user validation was successful"
+        }
+      },
+      "title": "Response from AuthenticateUser request"
+    },
+    "accountAuthenticateUserRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        }
+      },
+      "title": "Request to authenticate a user"
+    },
+    "accountCreateAdminRequest": {
+      "type": "object",
+      "properties": {
+        "super_admin_username": {
+          "type": "string"
+        },
+        "new_admin": {
+          "$ref": "#/definitions/accountAdmin"
+        },
+        "admin_private": {
+          "$ref": "#/definitions/accountPrivateProfile"
+        }
+      },
+      "title": "Request to create a new admin"
+    },
+    "accountCreateUserRequest": {
+      "type": "object",
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "title": "request_id to detect duplicate requests"
+        },
+        "profile": {
+          "$ref": "#/definitions/accountProfile",
+          "title": "User profile information"
+        },
+        "private_profile": {
+          "$ref": "#/definitions/accountPrivateProfile",
+          "title": "Private information"
+        }
+      },
+      "title": "Request to create an account"
+    },
+    "accountFacebook": {
+      "type": "object",
+      "properties": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "phone_number": {
+          "type": "string"
+        },
+        "email_address": {
+          "type": "string"
+        },
+        "profile_url": {
+          "type": "string"
+        },
+        "gender": {
+          "type": "string"
+        },
+        "birth_date": {
+          "type": "string"
+        }
+      },
+      "title": "Facebook is request payload to login with their facebook"
+    },
+    "accountGoogle": {
+      "type": "object",
+      "properties": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "phone_number": {
+          "type": "string"
+        },
+        "email_address": {
+          "type": "string"
+        },
+        "profile_url": {
+          "type": "string"
+        },
+        "gender": {
+          "type": "string"
+        },
+        "birth_date": {
+          "type": "string"
+        }
+      },
+      "title": "Google is request payload to login using their google account"
+    },
+    "accountLoginAdminRequest": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "title": "Request to login the admin"
+    },
+    "accountLoginRequest": {
+      "type": "object",
+      "properties": {
+        "facebook": {
+          "$ref": "#/definitions/accountFacebook"
+        },
+        "google": {
+          "$ref": "#/definitions/accountGoogle"
+        },
+        "phone": {
+          "$ref": "#/definitions/accountPhone"
+        }
+      },
+      "title": "Request to login"
+    },
+    "accountLoginResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      },
+      "title": "LoginResponse contains jwt token on successful login"
+    },
+    "accountNotificationMethod": {
+      "type": "string",
+      "enum": [
+        "EMAIL_AND_PHONE",
+        "EMAIL_ONLY",
+        "PHONE_ONLY"
+      ],
+      "default": "EMAIL_AND_PHONE",
+      "title": "Ways a user receives notification"
+    },
+    "accountPhone": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "title": "Phone is request payload to login using phone number"
+    },
+    "accountPrivateProfile": {
+      "type": "object",
+      "properties": {
+        "password": {
+          "type": "string"
+        },
+        "security_question": {
+          "type": "string"
+        },
+        "security_answer": {
+          "type": "string"
+        }
+      },
+      "title": "ProfileSecure contains private account information"
+    },
+    "accountProfile": {
+      "type": "object",
+      "properties": {
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "phone_number": {
+          "type": "string"
+        },
+        "email_address": {
+          "type": "string"
+        },
+        "profile_url": {
+          "type": "string"
+        },
+        "birth_date": {
+          "type": "string"
+        },
+        "gender": {
+          "type": "string"
+        },
+        "notification_method": {
+          "$ref": "#/definitions/accountNotificationMethod"
+        },
+        "subscribe_notifications": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean",
+            "format": "boolean"
+          }
+        }
+      },
+      "title": "Profile contains user information"
+    }
+  }
+}
