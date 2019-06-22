@@ -97,6 +97,16 @@ message GetUserRequest {
     string phone = 2;
 }
 
+// Request to get user's notification method
+message GetNotificationMethodRequest {
+    string user_id = 1;
+}
+
+// Response to GetNotificationMethodRequest call
+message GetNotificationMethodResponse {
+    string notification_method = 1;
+}
+
 // Request to authenticate a user
 message AuthenticateUserRequest {
     string email = 1;
@@ -155,6 +165,7 @@ message AuthenticateAdminRequest {
 
 // Manages user and admin accounts
 service AccountAPI {
+
     // Authenticates a user to login into their account
     rpc Login (LoginRequest) returns (LoginResponse) {
         // Login method maps to HTTP POST
@@ -164,6 +175,7 @@ service AccountAPI {
             body: "*"
         };
     }
+
     // Creates a user
     rpc CreateUser (CreateUserRequest) returns (google.protobuf.Empty) {
         // CreateUser method maps to HTTP POST 
@@ -173,6 +185,7 @@ service AccountAPI {
             body: "*"
         };
     }
+
     // Retrieves default token for defualt user
     rpc GetDefaultToken (GetDefaultTokenRequest) returns (LoginResponse) {
         // GetDefaultToken method maps to HTTP GET
@@ -180,6 +193,7 @@ service AccountAPI {
             get: "/api/account/token"
         };
     }
+
     // Retrieves a user profile
     rpc GetUser (GetUserRequest) returns (Profile) {
         // GetUser method maps to HTTP GET
@@ -188,6 +202,10 @@ service AccountAPI {
             get: "/api/account/users/profile"
         };
     }
+
+    // Retrieves a user notification method
+    rpc GetNotificationMethod(GetNotificationMethodRequest) returns (GetNotificationMethodResponse);
+    
     // Authenticates a user to check if they are logged in and with valid token.
     rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateResponse) {
         // AuthenticateUser maps to HTTP POST
@@ -197,6 +215,7 @@ service AccountAPI {
             body: "*"
         };
     }
+
     // Lists all user in the database. Admins only
     rpc ListUsers (ListUsersRequest) returns (stream Profile) {
         // ListUsers maps to HTTP GET
@@ -205,6 +224,7 @@ service AccountAPI {
             get: "/api/account/users"
         };
     }
+
     // Admin section
     // Authenticates admins when they log in to their account
     rpc LoginAdmin (LoginAdminRequest) returns (LoginResponse) {
@@ -215,6 +235,7 @@ service AccountAPI {
             body: "*"
         };
     }
+
     // Creates a new admin
     rpc CreateAdmin (CreateAdminRequest) returns (google.protobuf.Empty) {
         // CreateAdmin method maps to HTTP POST
@@ -224,6 +245,7 @@ service AccountAPI {
             body: "*"
         };
     }
+
     // GetAdmin retrieves an admin profile
     rpc GetAdmin (GetAdminRequest) returns (Admin) {
         // GetAdmin maps to HTTP GET
@@ -232,6 +254,7 @@ service AccountAPI {
             get: "/api/account/admins/{user_name}"
         };
     }
+
     // Authenticates admin to check if they are logged in and have valid token
     rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateResponse) {
         // Maps to HTTP POST
@@ -241,4 +264,5 @@ service AccountAPI {
             body: "*"
         };
     }
+    
 }
