@@ -97,16 +97,6 @@ message GetUserRequest {
     string phone = 2;
 }
 
-// Request to get user's notification method
-message GetNotificationMethodRequest {
-    string user_id = 1;
-}
-
-// Response to GetNotificationMethodRequest call
-message GetNotificationMethodResponse {
-    string notification_method = 1;
-}
-
 // Request to authenticate a user
 message AuthenticateUserRequest {
     string email = 1;
@@ -161,6 +151,7 @@ message GetAdminRequest {
 // Request to authenticate admin
 message AuthenticateAdminRequest {
     string username = 1;
+    AdminLevel level = 2;
 }
 
 // Manages user and admin accounts
@@ -202,9 +193,6 @@ service AccountAPI {
             get: "/api/account/users/profile"
         };
     }
-
-    // Retrieves a user notification method
-    rpc GetNotificationMethod(GetNotificationMethodRequest) returns (GetNotificationMethodResponse);
     
     // Authenticates a user to check if they are logged in and with valid token.
     rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthenticateResponse) {
