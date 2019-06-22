@@ -399,6 +399,15 @@
       },
       "title": "Facebook is request payload to login with facebook account"
     },
+    "accountGetNotificationMethodResponse": {
+      "type": "object",
+      "properties": {
+        "notification_method": {
+          "type": "string"
+        }
+      },
+      "title": "Response to GetNotificationMethodRequest call"
+    },
     "accountGoogle": {
       "type": "object",
       "properties": {
