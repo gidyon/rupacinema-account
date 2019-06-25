@@ -177,13 +177,16 @@ service AccountAPI {
         };
     }
 
-    // Retrieves default token for defualt user
+    // Retrieves default token for default user
     rpc GetDefaultToken (GetDefaultTokenRequest) returns (LoginResponse) {
         // GetDefaultToken method maps to HTTP GET
         option (google.api.http) = {
             get: "/api/account/token"
         };
     }
+
+    // Authenticates requests from external services
+    rpc AuthenticateRequest (google.protobuf.Empty) returns (google.protobuf.Empty);
 
     // Retrieves a user profile
     rpc GetUser (GetUserRequest) returns (Profile) {
@@ -204,16 +207,16 @@ service AccountAPI {
         };
     }
 
+    // Admin section
+
     // Lists all user in the database. Admins only
     rpc ListUsers (ListUsersRequest) returns (stream Profile) {
         // ListUsers maps to HTTP GET
-        // No body.
         option (google.api.http) = {
             get: "/api/account/users"
         };
     }
 
-    // Admin section
     // Authenticates admins when they log in to their account
     rpc LoginAdmin (LoginAdminRequest) returns (LoginResponse) {
         // LoginAdmin method maps to HTTP POST
