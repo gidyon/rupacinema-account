@@ -52,8 +52,6 @@ CREATE TABLE `profile` (
   `phone` varchar(15) NOT NULL,
   `birth_date` date DEFAULT NULL,
   `gender` enum('male','female','all') NOT NULL DEFAULT 'all',
-  `notification_method` enum('EMAIL_AND_PHONE','EMAIL_ONLY','PHONE_ONLY') NOT NULL DEFAULT 'EMAIL_AND_PHONE',
-  `subscribed_notifications` json NOT NULL,
   `state` tinyint(1) NOT NULL DEFAULT '1',
   `security_question` varchar(50) DEFAULT NULL,
   `security_answer` varchar(40) DEFAULT NULL,
