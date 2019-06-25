@@ -465,16 +465,6 @@
       },
       "title": "LoginResponse contains jwt token on successful login"
     },
-    "accountNotificationMethod": {
-      "type": "string",
-      "enum": [
-        "EMAIL_AND_PHONE",
-        "EMAIL_ONLY",
-        "PHONE_ONLY"
-      ],
-      "default": "EMAIL_AND_PHONE",
-      "title": "Ways a user receives notification"
-    },
     "accountPhone": {
       "type": "object",
       "properties": {
@@ -525,16 +515,6 @@
         },
         "gender": {
           "type": "string"
-        },
-        "notification_method": {
-          "$ref": "#/definitions/accountNotificationMethod"
-        },
-        "subscribe_notifications": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "boolean",
-            "format": "boolean"
-          }
         }
       },
       "title": "Profile contains user information"
