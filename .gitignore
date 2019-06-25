@@ -16,3 +16,4 @@
 vendor/
 third_party/
 certs/
+api/swagger/
