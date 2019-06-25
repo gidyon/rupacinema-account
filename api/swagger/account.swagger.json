@@ -71,7 +71,7 @@
     },
     "/api/account/admins/login": {
       "post": {
-        "summary": "Admin section\nAuthenticates admins when they log in to their account",
+        "summary": "Authenticates admins when they log in to their account",
         "operationId": "LoginAdmin",
         "responses": {
           "200": {
@@ -123,7 +123,7 @@
     },
     "/api/account/token": {
       "get": {
-        "summary": "Retrieves default token for defualt user",
+        "summary": "Retrieves default token for default user",
         "operationId": "GetDefaultToken",
         "responses": {
           "200": {
@@ -312,6 +312,9 @@
       "properties": {
         "username": {
           "type": "string"
+        },
+        "level": {
+          "$ref": "#/definitions/accountAdminLevel"
         }
       },
       "title": "Request to authenticate admin"
@@ -398,15 +401,6 @@
         }
       },
       "title": "Facebook is request payload to login with facebook account"
-    },
-    "accountGetNotificationMethodResponse": {
-      "type": "object",
-      "properties": {
-        "notification_method": {
-          "type": "string"
-        }
-      },
-      "title": "Response to GetNotificationMethodRequest call"
     },
     "accountGoogle": {
       "type": "object",
