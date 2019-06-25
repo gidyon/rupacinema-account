@@ -17,15 +17,6 @@ message Profile {
     string profile_url = 5;
     string birth_date = 6;
     string gender = 7;
-    NotificationMethod notification_method = 8;
-    map<string, bool> subscribe_notifications = 9;
-}
-
-// Ways a user receives notification
-enum NotificationMethod {
-    EMAIL_AND_PHONE = 0;
-    EMAIL_ONLY = 1;
-    PHONE_ONLY = 2;
 }
 
 // PrivateProfile contains private account information
