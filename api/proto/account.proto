@@ -240,7 +240,7 @@ service AccountAPI {
     // Authenticates admin to check if they are logged in and have valid token
     rpc AuthenticateAdmin (AuthenticateAdminRequest) returns (AuthenticateResponse) {
         // Maps to HTTP POST
-        // username maps to request body
+        // user_name and admin_level maps to request body
         option (google.api.http) = {
             post: "/api/account/admins/auth"
             body: "*"
