@@ -25,35 +25,66 @@ func main() {
 	)
 
 	flag.BoolVar(
-		&useFlags, "uflag", false, "Whether to pass config in flags",
+		&useFlags,
+		"uflag", false,
+		"Whether to pass config in flags",
 	)
+
 	// gRPC section
 	flag.StringVar(
-		&cfg.GRPCPort, "grpc-port", ":5530", "gRPC port to bind",
+		&cfg.GRPCPort,
+		"grpc-port", ":5500",
+		"gRPC port to bind",
 	)
+
 	// DB section
 	flag.StringVar(
-		&cfg.DBHost, "db-host", "mysqldb", "Database host",
+		&cfg.DBHost,
+		"db-host", "localhost",
+		"Database host",
 	)
 	flag.StringVar(
-		&cfg.DBUser, "db-user", "root", "Database user",
+		&cfg.DBUser,
+		"db-user", "root",
+		"Database user",
 	)
 	flag.StringVar(
-		&cfg.DBPassword, "db-password", "hakty11", "Database password",
+		&cfg.DBPassword,
+		"db-password", "hakty11",
+		"Database password",
 	)
+	flag.StringVar(
+		&cfg.DBSchema,
+		"db-schema", "rupa-account",
+		"Database Schema to use",
+	)
+
 	// Logging section
 	flag.IntVar(
-		&cfg.LogLevel, "log-level", defaultLogLevel, "Global log level",
+		&cfg.LogLevel,
+		"log-level", defaultLogLevel,
+		"Global log level",
 	)
 	flag.StringVar(
-		&cfg.LogTimeFormat, "log-time-format", defaultLogTimeFormat,
+		&cfg.LogTimeFormat,
+		"log-time-format", defaultLogTimeFormat,
 		"Print time format for logger e.g 2006-01-02T15:04:05Z07:00",
 	)
-	// JWT Section
+
+	// TLS Certificate and Private key paths for service
 	flag.StringVar(
-		&cfg.JWTToken, "jwt-token", "", "Token to sign JWT claims",
+		&cfg.TLSCertPath,
+		"tls-cert", "certs/cert.pem",
+		"Path to TLS certificate for the service",
 	)
+	flag.StringVar(
+		&cfg.TLSKeyPath,
+		"tls-key", "certs/key.pem",
+		"Path to Private key for the service",
+	)
+
 	// External Services
+	// Notification Service
 	flag.StringVar(
 		&cfg.NotificationServiceAddress,
 		"notification-host", "localhost",
@@ -61,8 +92,20 @@ func main() {
 	)
 	flag.StringVar(
 		&cfg.NotificationServicePort,
-		"notification-port", ":10039",
-		"Port where the notification service is running in remote machine",
+		"notification-port", ":5540",
+		"Port where the notification service is running",
+	)
+	flag.StringVar(
+		&cfg.NotificationServiceCertPath,
+		"notification-cert", "certs/cert.pem",
+		"Path to TLS certificate for notification service",
+	)
+
+	// JWT Section
+	flag.StringVar(
+		&cfg.JWTToken,
+		"jwt-token", "",
+		"Token to sign JWT claims",
 	)
 
 	flag.Parse()
@@ -70,15 +113,23 @@ func main() {
 	if !useFlags {
 		// Get from environmnent variables
 		cfg = &config.Config{
+			// GRPC section
 			GRPCPort: os.Getenv("GRPC_PORT"),
 			// Mysql section
-			DBHost:                     os.Getenv("MYSQL_HOST"),
-			DBUser:                     os.Getenv("MYSQL_USER"),
-			DBPassword:                 os.Getenv("MYSQL_PASSWORD"),
-			DBSchema:                   os.Getenv("MYSQL_DATABASE"),
-			JWTToken:                   os.Getenv("JWT_SIGNING_TOKEN"),
-			NotificationServiceAddress: os.Getenv("NOTIFICATION_ADDRESS"),
-			NotificationServicePort:    os.Getenv("NOTIFICATION_PORT"),
+			DBHost:     os.Getenv("MYSQL_HOST"),
+			DBUser:     os.Getenv("MYSQL_USER"),
+			DBPassword: os.Getenv("MYSQL_PASSWORD"),
+			DBSchema:   os.Getenv("MYSQL_DATABASE"),
+			// TLS certificate and private key paths
+			TLSCertPath: os.Getenv("TLS_CERT_PATH"),
+			TLSKeyPath:  os.Getenv("TLS_KEY_PATH"),
+			// Ecternal services section
+			// Notification service
+			NotificationServiceAddress:  os.Getenv("NOTIFICATION_ADDRESS"),
+			NotificationServicePort:     os.Getenv("NOTIFICATION_PORT"),
+			NotificationServiceCertPath: os.Getenv("NOTIFICATION_CERT_PATH"),
+			// JWT section
+			JWTToken: os.Getenv("JWT_SIGNING_TOKEN"),
 		}
 		logLevel := os.Getenv("LOG_LEVEL")
 		logTimeFormat := os.Getenv("LOG_TIME_FORMAT")
@@ -109,10 +160,15 @@ func main() {
 	s := bufio.NewScanner(os.Stdin)
 	defer cancel()
 
+	logrus.Infof(
+		"Type %q or %q or %q or %q to stop the service",
+		"kill", "KILL", "quit", "QUIT",
+	)
+
 	// Shutdown when user press q or Q
 	go func() {
 		for s.Scan() {
-			if s.Text() == "q" || s.Text() == "Q" {
+			if s.Text() == "kill" || s.Text() == "KILL" || s.Text() == "quit" || s.Text() == "QUIT" {
 				cancel()
 				return
 			}
