@@ -26,13 +26,15 @@ type JWTClaims struct {
 }
 
 // GenToken json web token
-func GenToken(ctx context.Context, profile *account.Profile, admin *account.Admin) (string, error) {
+func GenToken(
+	ctx context.Context, profile *account.Profile, admin *account.Admin,
+) (string, error) {
 	token := jwt.NewWithClaims(signingMethod, JWTClaims{
 		profile,
 		admin,
 		jwt.StandardClaims{
-			ExpiresAt: 1500,
-			Issuer:    "Rupa Cinema",
+			// ExpiresAt: 1500,
+			Issuer: "Rupa Cinema",
 		},
 	})
 
@@ -54,11 +56,17 @@ func GetTokenInfo(ctx context.Context) (*AdminAndUserDS, error) {
 }
 
 func parseToken(tokenString string) (*JWTClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return signingKey, nil
-	})
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&JWTClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return signingKey, nil
+		},
+	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to parde token with claims: %v", err)
+		return nil, status.Errorf(
+			codes.Internal, "failed to parse token with claims: %v", err,
+		)
 	}
 	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
@@ -92,9 +100,12 @@ func AddAuthentication(
 	signingMethod = signingMethodP
 
 	authFunc := func(ctx context.Context) (context.Context, error) {
+
 		token, err := grpc_auth.AuthFromMD(ctx, "Bearer")
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get Bearer: %v", err)
+			return nil, status.Errorf(
+				codes.Internal, "failed to get Bearer from authorization header: %v", err,
+			)
 		}
 
 		_, ok := metadata.FromIncomingContext(ctx)

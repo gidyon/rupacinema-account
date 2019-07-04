@@ -3,7 +3,10 @@ package rest
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"github.com/gidyon/rupacinema/account/internal/protocol"
+	"github.com/gidyon/rupacinema/account/internal/protocol/grpc/middleware"
 	"github.com/gidyon/rupacinema/account/pkg/api"
 	"github.com/gidyon/rupacinema/account/pkg/logger"
 	"go.uber.org/zap"
@@ -80,8 +83,12 @@ func serve(
 		return err
 	}
 
-	logger.Log.Info("gRPC and REST account service running", zap.String("gRPC Port", cfg.GRPCPort))
+	logger.Log.Info(
+		"<gRPC and REST> server for account service running",
+		zap.String("gRPC Port", cfg.GRPCPort),
+	)
 
+	// Graceful shutdown
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -101,6 +108,9 @@ func Serve(
 	ctx context.Context,
 	cfg *config.Config,
 ) error {
+	// Initialize paths to cert and key
+	protocol.SetKeyAndCertPaths(cfg.TLSKeyPath, cfg.TLSCertPath)
+
 	// gRPC server
 	gRPCServer, err := grpc_server.CreateGRPCServer(ctx, cfg)
 	if err != nil {
@@ -122,6 +132,19 @@ func Serve(
 	// Test endpoint
 	mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("accounts will work!"))
+	})
+
+	// Gen default token
+	mux.HandleFunc("/genrupadefaultoken", func(w http.ResponseWriter, r *http.Request) {
+		token, err := middleware.GenToken(r.Context(), &account.Profile{}, &account.Admin{})
+		if err != nil {
+			http.Error(
+				w,
+				fmt.Sprintf("error while genrating token: %v", err),
+				http.StatusInternalServerError,
+			)
+		}
+		json.NewEncoder(w).Encode(token)
 	})
 
 	return serve(ctx, cfg, gRPCServer, mux)

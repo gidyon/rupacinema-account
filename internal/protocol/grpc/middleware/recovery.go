@@ -8,7 +8,7 @@ import (
 )
 
 func customFunc(ctx context.Context, p interface{}) error {
-	return fmt.Errorf("panic: %v", p)
+	return fmt.Errorf("recovering from panic: %v", p)
 }
 
 // AddRecovery recovers from gRPC panics from handlers

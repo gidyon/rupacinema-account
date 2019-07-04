@@ -46,26 +46,22 @@ func CreateGRPCServer(ctx context.Context, cfg *config.Config) (*grpc.Server, er
 	// add recovery from panic middleware
 	unaryRecoveryInterceptors, streamRecoveryInterceptors := middleware.AddRecovery()
 
-	chainUnaryInterceptors()
 	opts = append(opts,
 		grpc_middleware.WithUnaryServerChain(
-			append(
+			chainUnaryInterceptors(
 				unaryLoggerInterceptors,
-				append(
-					unaryRecoveryInterceptors,
-					unaryAuthInterceptor,
-				)...,
+				[]grpc.UnaryServerInterceptor{unaryAuthInterceptor},
+				unaryRecoveryInterceptors,
 			)...,
 		),
 		grpc_middleware.WithStreamServerChain(
-			append(
+			chainStreamInterceptors(
 				streamLoggerInterceptors,
-				append(
-					streamRecoveryInterceptors,
-					streamAuthInterceptor,
-				)...,
+				[]grpc.StreamServerInterceptor{streamAuthInterceptor},
+				streamRecoveryInterceptors,
 			)...,
-		))
+		),
+	)
 
 	s := grpc.NewServer(opts...)
 
@@ -74,6 +70,7 @@ func CreateGRPCServer(ctx context.Context, cfg *config.Config) (*grpc.Server, er
 		return nil, err
 	}
 
+	// Register the account service
 	account.RegisterAccountAPIServer(s, accountService)
 
 	// Register reflection service on gRPC server.
@@ -82,26 +79,34 @@ func CreateGRPCServer(ctx context.Context, cfg *config.Config) (*grpc.Server, er
 	return s, nil
 }
 
-func chainUnaryInterceptors(
-	unaryInterceptors ...grpc.UnaryServerInterceptor,
-) []grpc.UnaryServerInterceptor {
-	unaryInterceptorsSlice := make([]grpc.UnaryServerInterceptor, 0, len(unaryInterceptors))
+type grpcUnaryInterceptorsSlice []grpc.UnaryServerInterceptor
 
-	for _, unaryInterceptor := range unaryInterceptors {
-		unaryInterceptorsSlice = append(unaryInterceptorsSlice, unaryInterceptor)
+func chainUnaryInterceptors(
+	unaryInterceptorsSlice ...grpcUnaryInterceptorsSlice,
+) []grpc.UnaryServerInterceptor {
+	unaryInterceptors := make([]grpc.UnaryServerInterceptor, 0, len(unaryInterceptorsSlice))
+
+	for _, unaryInterceptorSlice := range unaryInterceptorsSlice {
+		for _, unaryInterceptor := range unaryInterceptorSlice {
+			unaryInterceptors = append(unaryInterceptors, unaryInterceptor)
+		}
 	}
 
-	return unaryInterceptorsSlice
+	return unaryInterceptors
 }
 
-func chainStreamInterceptors(
-	streamInterceptors ...grpc.StreamServerInterceptor,
-) []grpc.StreamServerInterceptor {
-	streamInterceptorsSlice := make([]grpc.StreamServerInterceptor, 0, len(streamInterceptors))
+type grpcStreamInterceptorsSlice []grpc.StreamServerInterceptor
 
-	for _, streamInterceptor := range streamInterceptors {
-		streamInterceptorsSlice = append(streamInterceptorsSlice, streamInterceptor)
+func chainStreamInterceptors(
+	streamInterceptorsSlice ...grpcStreamInterceptorsSlice,
+) []grpc.StreamServerInterceptor {
+	streamInterceptors := make([]grpc.StreamServerInterceptor, 0, len(streamInterceptorsSlice))
+
+	for _, streamInterceptorSlice := range streamInterceptorsSlice {
+		for _, streamInterceptor := range streamInterceptorSlice {
+			streamInterceptors = append(streamInterceptors, streamInterceptor)
+		}
 	}
 
-	return streamInterceptorsSlice
+	return streamInterceptors
 }
