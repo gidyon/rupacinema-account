@@ -45,7 +45,7 @@ CREATE TABLE `admins` (
 -- Table structure for table `profile`
 --
 
-CREATE TABLE `profile` (
+CREATE TABLE `users` (
   `first_name` varchar(50) NOT NULL,
   `last_name` varchar(50) NOT NULL,
   `email` varchar(50) DEFAULT NULL,
@@ -71,7 +71,7 @@ ALTER TABLE `admins`
 --
 -- Indexes for table `profile`
 --
-ALTER TABLE `profile`
+ALTER TABLE `users`
   ADD KEY `em_ph` (`email`,`phone`);
 COMMIT;
 
