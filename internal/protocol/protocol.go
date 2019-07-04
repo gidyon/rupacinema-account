@@ -6,12 +6,23 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
-const (
+var (
 	crt = "certs/cert.pem"
 	key = "certs/key.pem"
 )
+
+// SetKeyAndCertPaths initializes path to private key and certificate
+func SetKeyAndCertPaths(keyPath, certPath string) {
+	if strings.Trim(keyPath, " ") != "" {
+		crt = certPath
+	}
+	if strings.Trim(certPath, " ") != "" {
+		key = keyPath
+	}
+}
 
 // GetCert returns a certificate pair, pool and an error
 func GetCert() (*tls.Certificate, *x509.CertPool, error) {
