@@ -40,10 +40,17 @@ type Config struct {
 	// LogTimeFormat id print time format for logger e.g 2006-01-02T15:04:05Z07:00
 	LogTimeFormat string
 
+	// Certificates and Key section
+	// Path to Certificate
+	TLSCertPath string
+	TLSKeyPath  string
+
 	// External services section
 	// Notification service
-	NotificationServiceAddress string
-	NotificationServicePort    string
+	NotificationServiceAddress  string
+	NotificationServicePort     string
+	NotificationServiceCertPath string
+
 	// JWT Token
 	JWTToken string
 	// Signing method
