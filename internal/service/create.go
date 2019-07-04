@@ -4,10 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/gidyon/rupacinema/account/pkg/api"
+	"github.com/gidyon/rupacinema/notification/pkg/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"strings"
+	"time"
 )
 
 type createUserDS struct {
@@ -20,6 +25,7 @@ func (createUser *createUserDS) Create(
 	sqlWorkerChan chan<- sqlWorker,
 	createReq *account.CreateUserRequest,
 	db *sql.DB,
+	notificationServiceClient notification.NotificationServiceClient,
 ) {
 	// Check if context is cancelled before proceeding
 	if cancelled(ctx) {
@@ -36,7 +42,11 @@ func (createUser *createUserDS) Create(
 	err := func() error {
 		var err error
 		switch {
-		case strings.Trim(profile.EmailAddress, " ") == "" && strings.Trim(profile.PhoneNumber, " ") == "":
+		case strings.Trim(
+			profile.EmailAddress, " ",
+		) == "" && strings.Trim(
+			profile.PhoneNumber, " ",
+		) == "":
 			err = errMissingCredential("email address or phone number")
 		case strings.Trim(profile.FirstName, " ") == "":
 			err = errMissingCredential("first name")
@@ -58,6 +68,33 @@ func (createUser *createUserDS) Create(
 
 	createUser.res = &empty.Empty{}
 
+	// Notify user
+	notificationServiceClient.Trigger(
+		ctx,
+		&notification.Notification{
+			NotificationId: uuid.New().String(),
+			Priority:       notification.Priority_MEDIUM,
+			SendMethod:     notification.SendMethod_EMAIL,
+			CreateTime:     &timestamp.Timestamp{Nanos: int32(time.Now().Nanosecond())},
+			EmailNotification: &notification.EmailNotification{
+				To:              profile.EmailAddress,
+				Subject:         "Rup Cinema Account",
+				BodyContentType: "text/html",
+				Body: fmt.Sprintf(
+					"Hi %s %s, Account created successful. You are now a member of rupacinema",
+					profile.FirstName, profile.LastName,
+				),
+			},
+			SmsNotification: &notification.SMSNotification{
+				Message: fmt.Sprintf(
+					"Hi %s, Account created successful. You are now a member of rupacinema",
+					profile.FirstName+profile.LastName,
+				),
+			},
+			Bulk: false,
+			Save: false,
+		},
+	)
 }
 
 func insertUserToDB(ctx context.Context, db *sql.DB, createReq *account.CreateUserRequest) error {
@@ -69,19 +106,6 @@ func insertUserToDB(ctx context.Context, db *sql.DB, createReq *account.CreateUs
 	profile := createReq.GetProfile()
 	privateProfile := createReq.GetPrivateProfile()
 
-	// `first_name` varchar(50) NOT NULL,
-	// `last_name` varchar(50) NOT NULL,
-	// `email` varchar(50) DEFAULT NULL,
-	// `phone` varchar(15) NOT NULL,
-	// `birth_date` date DEFAULT NULL,
-	// `gender` enum('male','female','all') NOT NULL DEFAULT 'all',
-	// `notification_method` enum('EMAIL_AND_PHONE','EMAIL_ONLY','PHONE_ONLY') NOT NULL DEFAULT 'EMAIL_AND_PHONE',
-	// `subscribed_notifications` json NOT NULL,
-	// `state` tinyint(1) NOT NULL DEFAULT '1',
-	// `security_question` varchar(50) DEFAULT NULL,
-	// `security_answer` varchar(40) DEFAULT NULL,
-	// `password` text NOT NULL
-
 	if strings.Trim(privateProfile.Password, " ") != "" {
 		newPass, err := generateHashPassword(privateProfile.Password)
 		if err != nil {
@@ -90,17 +114,33 @@ func insertUserToDB(ctx context.Context, db *sql.DB, createReq *account.CreateUs
 		privateProfile.Password = newPass
 	}
 
-	subsribedNotifications, err := json.Marshal(profile.SubscribeNotifications)
-	if err != nil {
-		return errFromJSONMarshal(err, "Profile.SubscribedNotifications")
+	firstName := ""
+	// Check the user does not exist
+	query := `SELECT first_name FROM users WHERE email=? OR phone=?`
+	// Execute query and populate result
+	row := db.QueryRow(query, profile.EmailAddress, profile.PhoneNumber)
+	err := row.Scan(&firstName)
+	switch err {
+	case nil:
+		return errAccountDoesExist()
+	case sql.ErrNoRows:
+	default:
+		return errQueryFailed(err, "CreateUser (SELECT)")
 	}
 
+	// `first_name` varchar(50) NOT NULL,
+	// `last_name` varchar(50) NOT NULL,
+	// `email` varchar(50) DEFAULT NULL,
+	// `phone` varchar(15) NOT NULL,
+	// `birth_date` date DEFAULT NULL,
+	// `gender` enum('male','female','all') NOT NULL DEFAULT 'all',
+	// `state` tinyint(1) NOT NULL DEFAULT '1',
+	// `security_question` varchar(50) DEFAULT NULL,
+	// `security_answer` varchar(40) DEFAULT NULL,
+	// `password` text NOT NULL
+
 	// Prepare query
-	query := `INSERT INTO profiles (
-		first_name, last_name, email, phone, birth_date, gender, 
-		notification_method, subscribed_notifications, 
-		state, security_question, security_answer, password
-	) VALUES(?, ?, ?, ?, DATE(?), ?, ?, ?, ?, ?, ?, ?)`
+	query = `INSERT INTO users (first_name, last_name, email, phone, birth_date, gender, state, security_question, security_answer, password) VALUES(?, ?, ?, ?, DATE(?), ?, ?, ?, ?, ?)`
 
 	// Execute query
 	_, err = db.ExecContext(ctx, query,
@@ -110,8 +150,6 @@ func insertUserToDB(ctx context.Context, db *sql.DB, createReq *account.CreateUs
 		profile.PhoneNumber,
 		profile.BirthDate,
 		profile.Gender,
-		account.NotificationMethod_name[int32(profile.NotificationMethod)],
-		subsribedNotifications,
 		1,
 		privateProfile.SecurityQuestion,
 		privateProfile.SecurityAnswer,
@@ -147,6 +185,7 @@ func (createAdmin *createAdminDS) Create(
 	sqlWorkerChan chan<- sqlWorker,
 	createReq *account.CreateAdminRequest,
 	db *sql.DB,
+	notificationServiceClient notification.NotificationServiceClient,
 ) {
 	// Check if context is cancelled before proceeding
 	if cancelled(ctx) {
@@ -159,7 +198,25 @@ func (createAdmin *createAdminDS) Create(
 		return
 	}
 
-	err := insertAdminToDB(ctx, db, createReq)
+	// Validate the profile information
+	err := func() error {
+		var err error
+		switch {
+		case strings.Trim(admin.EmailAddress, " ") == "":
+			err = errMissingCredential("email address")
+		case strings.Trim(admin.FirstName, " ") == "":
+			err = errMissingCredential("first name")
+		case strings.Trim(admin.LastName, " ") == "":
+			err = errMissingCredential("last name")
+		}
+		return err
+	}()
+	if err != nil {
+		createAdmin.err = err
+		return
+	}
+
+	err = insertAdminToDB(ctx, db, createReq)
 	if err != nil {
 		createAdmin.err = err
 		return
@@ -167,9 +224,40 @@ func (createAdmin *createAdminDS) Create(
 
 	createAdmin.res = &empty.Empty{}
 
+	// Notify admin
+	notificationServiceClient.Trigger(
+		ctx,
+		&notification.Notification{
+			NotificationId: uuid.New().String(),
+			Priority:       notification.Priority_MEDIUM,
+			SendMethod:     notification.SendMethod_EMAIL,
+			CreateTime:     &timestamp.Timestamp{Nanos: int32(time.Now().Nanosecond())},
+			EmailNotification: &notification.EmailNotification{
+				From:            "Rupa Cinema Group",
+				To:              admin.EmailAddress,
+				Subject:         "Rup Cinema Group",
+				BodyContentType: "text/html",
+				Body: fmt.Sprintf(
+					"Hi %s %s, Account created successful\n. You are now an admin at the rupacinema.",
+					admin.FirstName, admin.LastName,
+				),
+			},
+			SmsNotification: &notification.SMSNotification{
+				Message: fmt.Sprintf(
+					"Hi %s %s, Account created successful. You are now an admin at the rupacinema.",
+					admin.FirstName, admin.LastName,
+				),
+			},
+			Bulk: false,
+			Save: false,
+		},
+	)
+
 }
 
-func insertAdminToDB(ctx context.Context, db *sql.DB, createAdmin *account.CreateAdminRequest) error {
+func insertAdminToDB(
+	ctx context.Context, db *sql.DB, createAdmin *account.CreateAdminRequest,
+) error {
 	// Check if context is cancelled
 	if cancelled(ctx) {
 		return ctx.Err()
@@ -188,6 +276,9 @@ func insertAdminToDB(ctx context.Context, db *sql.DB, createAdmin *account.Creat
 	if err != nil {
 		return errFromJSONMarshal(err, "Admin.TrustedDevices")
 	}
+	if len(trustedDevices) == 0 {
+		trustedDevices = []byte("[]")
+	}
 
 	// `first_name` varchar(50) NOT NULL,
 	// `last_name` varchar(50) NOT NULL,
@@ -199,9 +290,7 @@ func insertAdminToDB(ctx context.Context, db *sql.DB, createAdmin *account.Creat
 	// `password` text NOT NULL
 
 	// Prepare query
-	query := `INSERT INTO admins (
-		first_name, last_name, email, phone, user_name, admin_level, trusted_devices, password
-	) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO admins (first_name, last_name, email, phone, user_name, admin_level, trusted_devices, password) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// Execute query
 	_, err = db.ExecContext(ctx, query,
@@ -209,6 +298,7 @@ func insertAdminToDB(ctx context.Context, db *sql.DB, createAdmin *account.Creat
 		admin.LastName,
 		admin.EmailAddress,
 		admin.PhoneNumber,
+		admin.UserName,
 		account.AdminLevel_name[int32(admin.Level)],
 		trustedDevices,
 		privateProfile.Password,

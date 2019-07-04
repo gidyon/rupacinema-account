@@ -3,13 +3,15 @@ package service
 import (
 	"context"
 	"database/sql"
+	"github.com/gidyon/rupacinema/account/internal/protocol/grpc/middleware"
 	"github.com/gidyon/rupacinema/account/pkg/api"
 	"github.com/gidyon/rupacinema/movie/pkg/logger"
 	"github.com/gidyon/rupacinema/notification/pkg/api"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"strings"
+	"time"
 )
 
 type accountAPIServer struct {
@@ -64,13 +66,45 @@ func (accountAPISrv *accountAPIServer) CreateUser(
 
 	createUser := &createUserDS{}
 
-	createUser.Create(ctxCreate, accountAPISrv.sqlWorkerChan, createReq, accountAPISrv.db)
+	createUser.Create(
+		ctxCreate,
+		accountAPISrv.sqlWorkerChan,
+		createReq,
+		accountAPISrv.db,
+		accountAPISrv.notificationServiceClient,
+	)
 
 	if cancelled(ctxCreate) {
-		createUser.err = contextError(ctxCreate, "Create")
+		createUser.err = contextError(ctxCreate, "CreateUser")
 	}
 
 	return createUser.res, createUser.err
+}
+
+func (accountAPISrv *accountAPIServer) GetDefaultToken(
+	ctx context.Context, createReq *account.GetDefaultTokenRequest,
+) (*account.LoginResponse, error) {
+	token, err := middleware.GenToken(ctx, &account.Profile{
+		FirstName: uuid.New().String(),
+		LastName:  uuid.New().String(),
+		BirthDate: time.Now().String(),
+	}, &account.Admin{
+		FirstName: uuid.New().String(),
+		LastName:  uuid.New().String(),
+		UserName:  time.Now().String(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &account.LoginResponse{
+		Token: token,
+	}, nil
+}
+
+func (accountAPISrv *accountAPIServer) AuthenticateRequest(
+	ctx context.Context, _ *empty.Empty,
+) (*empty.Empty, error) {
+	return &empty.Empty{}, nil
 }
 
 func (accountAPISrv *accountAPIServer) GetUser(
@@ -84,7 +118,7 @@ func (accountAPISrv *accountAPIServer) GetUser(
 	getProfile.Get(ctxGet, getReq, accountAPISrv.db)
 
 	if cancelled(ctxGet) {
-		getProfile.err = contextError(ctxGet, "Create")
+		getProfile.err = contextError(ctxGet, "GetUser")
 	}
 
 	return getProfile.res, getProfile.err
@@ -101,7 +135,7 @@ func (accountAPISrv *accountAPIServer) AuthenticateUser(
 	authAccount.Authenticate(ctxAuth, authReq, accountAPISrv.db)
 
 	if cancelled(ctxAuth) {
-		authAccount.err = contextError(ctxAuth, "Authenticate")
+		authAccount.err = contextError(ctxAuth, "AuthenticateUser")
 
 	}
 
@@ -112,25 +146,30 @@ func (accountAPISrv *accountAPIServer) ListUsers(
 	listReq *account.ListUsersRequest, listSrv account.AccountAPI_ListUsersServer,
 ) error {
 	// Prepare query
-	query := `SELECT first_name, last_name, email, phone, birth_date FROM profiles`
+	query := `SELECT first_name, last_name, email, phone, birth_date FROM users`
 	// Execute query
 	rows, err := accountAPISrv.db.Query(query)
 	if err != nil {
-		return errQueryFailed(err, "GETUsers (SELECT)")
+		return errQueryFailed(err, "ListUsers (SELECT)")
 	}
 
 	// Send it via a stream
 	for rows.Next() {
 		profile := &account.Profile{}
-		err = rows.Scan(profile.FirstName, profile.LastName, profile.EmailAddress, profile.BirthDate)
+		err = rows.Scan(
+			&profile.FirstName,
+			&profile.LastName,
+			&profile.EmailAddress,
+			&profile.BirthDate,
+		)
 		if err != nil {
 			logger.Log.Error("error scanning results", zap.Error(err))
-			continue
+			return rows.Err()
 		}
 		err = listSrv.Send(profile)
 		if err != nil {
 			logger.Log.Error("error sending results", zap.Error(err))
-			continue
+			return rows.Err()
 		}
 	}
 
@@ -148,7 +187,7 @@ func (accountAPISrv *accountAPIServer) LoginAdmin(
 	login.Login(ctxLogin, loginReq, accountAPISrv.db)
 
 	if cancelled(ctxLogin) {
-		login.err = contextError(ctxLogin, "Login")
+		login.err = contextError(ctxLogin, "LoginAdmin")
 	}
 
 	return login.res, login.err
@@ -157,20 +196,60 @@ func (accountAPISrv *accountAPIServer) LoginAdmin(
 func (accountAPISrv *accountAPIServer) CreateAdmin(
 	ctx context.Context, createReq *account.CreateAdminRequest,
 ) (*empty.Empty, error) {
+
+	// Validate super admin username is provided
+	superAdminName := createReq.GetSuperAdminUsername()
+	if strings.Trim(superAdminName, " ") == "" {
+		return nil, errMissingCredential("SuperAdminUsername")
+	}
+
+	// Authenticate the superadmin
+	level, err := checkAdminInDB(ctx, accountAPISrv.db, superAdminName)
+	if err != nil {
+		return nil, err
+	}
+	if level != account.AdminLevel_SUPER_ADMIN {
+		return nil, errPermissionDenied("CreateAdmin")
+	}
+
 	ctxCreate, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	createAdmin := &createAdminDS{}
 
-	createAdmin.Create(ctxCreate, accountAPISrv.sqlWorkerChan, createReq, accountAPISrv.db)
+	createAdmin.Create(
+		ctxCreate,
+		accountAPISrv.sqlWorkerChan,
+		createReq,
+		accountAPISrv.db,
+		accountAPISrv.notificationServiceClient,
+	)
 
 	if cancelled(ctxCreate) {
-		createAdmin.err = contextError(ctxCreate, "Create")
+		createAdmin.err = contextError(ctxCreate, "CreateAdmin")
 	}
 
 	return createAdmin.res, createAdmin.err
 
 }
+
+func (accountAPISrv *accountAPIServer) GetAdmin(
+	ctx context.Context, getReq *account.GetAdminRequest,
+) (*account.Admin, error) {
+	ctxGet, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	getAdmin := &getAdminDS{}
+
+	getAdmin.Get(ctxGet, getReq, accountAPISrv.db)
+
+	if cancelled(ctxGet) {
+		getAdmin.err = contextError(ctxGet, "GetAdmin")
+	}
+
+	return getAdmin.res, getAdmin.err
+}
+
 func (accountAPISrv *accountAPIServer) AuthenticateAdmin(
 	ctx context.Context, authReq *account.AuthenticateAdminRequest,
 ) (*account.AuthenticateResponse, error) {
@@ -182,28 +261,9 @@ func (accountAPISrv *accountAPIServer) AuthenticateAdmin(
 	authAdmin.Authenticate(ctxAuth, authReq, accountAPISrv.db)
 
 	if cancelled(ctxAuth) {
-		authAdmin.err = contextError(ctxAuth, "Authenticate")
+		authAdmin.err = contextError(ctxAuth, "AuthenticateAdmin")
 
 	}
 
 	return authAdmin.res, authAdmin.err
-}
-
-// checks whether a given context has been cancelled
-func cancelled(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-	}
-	return false
-}
-
-// contextError wraps context error to a gRPC error
-func contextError(ctx context.Context, operation string) error {
-	if _, ok := ctx.Err().(interface{ Timeout() bool }); ok {
-		// Should retry the request
-		return status.Errorf(codes.DeadlineExceeded, "couldn't complete %s operation: %v", operation, ctx.Err())
-	}
-	return status.Errorf(codes.Canceled, "couldn't complete %s operation: %v", operation, ctx.Err())
 }

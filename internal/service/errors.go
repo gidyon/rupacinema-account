@@ -1,9 +1,29 @@
 package service
 
 import (
+	"context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// checks whether a given context has been cancelled
+func cancelled(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+	}
+	return false
+}
+
+// contextError wraps context error to a gRPC error
+func contextError(ctx context.Context, operation string) error {
+	if _, ok := ctx.Err().(interface{ Timeout() bool }); ok {
+		// Should retry the request
+		return status.Errorf(codes.DeadlineExceeded, "couldn't complete %s operation: %v", operation, ctx.Err())
+	}
+	return status.Errorf(codes.Canceled, "couldn't complete %s operation: %v", operation, ctx.Err())
+}
 
 func errFromJSONMarshal(err error, obj string) error {
 	return status.Errorf(codes.Internal, "failed to json marshal %s: %v", obj, err)
@@ -43,6 +63,10 @@ func errAccountBlocked() error {
 
 func errAccountDoesntExist() error {
 	return status.Error(codes.NotFound, "account does not exist")
+}
+
+func errAccountDoesExist() error {
+	return status.Error(codes.NotFound, "account exists")
 }
 
 func errWrongPassword() error {

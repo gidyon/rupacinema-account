@@ -7,6 +7,7 @@ import (
 	grpc_middleware "github.com/gidyon/rupacinema/account/internal/protocol/grpc/middleware"
 	"github.com/gidyon/rupacinema/account/pkg/api"
 	"strings"
+	"time"
 )
 
 type loginDS struct {
@@ -49,17 +50,14 @@ func (login *loginDS) Login(
 	// `phone` varchar(15) NOT NULL,
 	// `birth_date` date DEFAULT NULL,
 	// `gender` enum('male','female','all') NOT NULL DEFAULT 'all',
-	// `notification_method` enum('EMAIL_AND_PHONE','EMAIL_ONLY','PHONE_ONLY') NOT NULL DEFAULT 'EMAIL_AND_PHONE',
-	// `subscribed_notifications` json NOT NULL,
 	// `state` tinyint(1) NOT NULL DEFAULT '1',
 	// `security_question` varchar(50) DEFAULT NULL,
 	// `security_answer` varchar(40) DEFAULT NULL,
 	// `password` text NOT NULL
 
 	// Prepare query
-	query = "SELECT first_name, last_name, email, phone, birth_date, gender, notification_method, subscribed_notifications, state, password FROM profile WHERE email=? OR phone=?"
+	query = "SELECT first_name, last_name, email, phone, birth_date, gender, state, password FROM users WHERE email=? OR phone=?"
 
-	subscribeNotifications := make([]byte, 0)
 	state := 0
 	// Execute query
 	row := db.QueryRowContext(ctx, query, email, phone)
@@ -70,8 +68,6 @@ func (login *loginDS) Login(
 		&profile.PhoneNumber,
 		&profile.BirthDate,
 		&profile.Gender,
-		&profile.NotificationMethod,
-		&subscribeNotifications,
 		&state,
 		&hashedPassword,
 	)
@@ -80,7 +76,7 @@ func (login *loginDS) Login(
 		case sql.ErrNoRows:
 			login.err = errAccountDoesntExist()
 		default:
-			login.err = errQueryFailed(err, "Get Profile (SELECT)")
+			login.err = errQueryFailed(err, "GetProfile (SELECT)")
 		}
 		return
 	}
@@ -94,14 +90,23 @@ func (login *loginDS) Login(
 		}
 	}
 
-	// Generates the token from with claims from profile object
-	token, err := genToken(ctx, profile, &account.Admin{})
+	// Generates the token with claims from profile object
+	token, err := grpc_middleware.GenToken(ctx, &account.Profile{
+		FirstName:  profile.FirstName,
+		LastName:   profile.LastName,
+		BirthDate:  time.Now().String(),
+		ProfileUrl: time.Now().String(),
+	}, &account.Admin{
+		UserName: time.Now().String(),
+	})
 	if err != nil {
 		login.err = errFailedToGenToken(err)
 		return
 	}
 
-	login.res.Token = token
+	login.res = &account.LoginResponse{
+		Token: token,
+	}
 }
 
 type loginAdminDS struct {
@@ -121,7 +126,7 @@ func (login *loginAdminDS) Login(
 	password := loginReq.GetPassword()
 
 	// Check that the request has necessary credential
-	errFn := func() error {
+	err := func() error {
 		var err error
 		switch {
 		case strings.Trim(userName, " ") == "":
@@ -130,10 +135,10 @@ func (login *loginAdminDS) Login(
 			login.err = errMissingCredential("password")
 		}
 		return err
-	}
+	}()
 
-	if errFn() != nil {
-		login.err = errFn()
+	if err != nil {
+		login.err = err
 		return
 	}
 
@@ -157,7 +162,7 @@ func (login *loginAdminDS) Login(
 
 	// Execute query
 	row := db.QueryRowContext(ctx, query, userName)
-	err := row.Scan(
+	err = row.Scan(
 		&admin.FirstName,
 		&admin.LastName,
 		&admin.EmailAddress,
@@ -177,7 +182,7 @@ func (login *loginAdminDS) Login(
 		return
 	}
 
-	if err = json.Unmarshal(adminTrustedDevices, admin.TrustedDevices); err != nil {
+	if err = json.Unmarshal(adminTrustedDevices, &admin.TrustedDevices); err != nil {
 		login.err = errFromJSONUnMarshal(err, "Admin.TrustedDevices")
 		return
 	}
@@ -191,12 +196,21 @@ func (login *loginAdminDS) Login(
 		return
 	}
 
-	// Generates the token from with claims from profile object
-	token, err := grpc_middleware.GenToken(ctx, &account.Profile{}, admin)
+	// Generates the token with claims from admin object
+	token, err := grpc_middleware.GenToken(ctx, &account.Profile{
+		BirthDate:  time.Now().String(),
+		ProfileUrl: time.Now().String(),
+	}, &account.Admin{
+		FirstName: admin.FirstName,
+		LastName:  admin.LastName,
+		UserName:  time.Now().String(),
+	})
 	if err != nil {
 		login.err = errFailedToGenToken(err)
 		return
 	}
 
-	login.res.Token = token
+	login.res = &account.LoginResponse{
+		Token: token,
+	}
 }

@@ -32,7 +32,7 @@ func (authAccount *authAccountDS) Authenticate(
 
 	firstName := ""
 	// Query db to check if an account exist with provided credentials
-	query := `SELECT first_name FROM profile WHERE email=? OR phone=?`
+	query := `SELECT first_name FROM users WHERE email=? OR phone=?`
 	// Execute query
 	row := db.QueryRowContext(ctx, query, email, phoneNumber)
 
@@ -73,24 +73,44 @@ func (authAdmin *authAdminDS) Authenticate(
 		return
 	}
 
-	firstName := ""
-	// Query db to check if an account exist with provided credentials
-	query := `SELECT first_name FROM admins WHERE user_name=?`
-	// Execute query
-	row := db.QueryRowContext(ctx, query, userName)
-
-	err := row.Scan(&firstName)
+	level, err := checkAdminInDB(ctx, db, userName)
 	if err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			authAdmin.err = errAccountDoesntExist()
-		default:
-			authAdmin.err = errQueryFailed(err, "AuthenticateAdmin (SELECT)")
-		}
+		authAdmin.err = err
 		return
 	}
 
-	authAdmin.res = &account.AuthenticateResponse{
-		Valid: true,
+	valid := true
+	if level != authReq.GetLevel() {
+		valid = false
 	}
+
+	authAdmin.res = &account.AuthenticateResponse{
+		Valid: valid,
+	}
+}
+
+func checkAdminInDB(
+	ctx context.Context, db *sql.DB, userName string,
+) (account.AdminLevel, error) {
+	// Check if context is cancelled before proceeding
+	if cancelled(ctx) {
+		return -1, ctx.Err()
+	}
+
+	level := ""
+	// Query db to check if an account exist with provided credentials
+	query := `SELECT admin_level FROM admins WHERE user_name=?`
+	// Execute query
+	row := db.QueryRowContext(ctx, query, userName)
+
+	err := row.Scan(&level)
+	switch err {
+	case nil:
+	case sql.ErrNoRows:
+		return -1, errAccountDoesntExist()
+	default:
+		return -1, errQueryFailed(err, "AuthenticateAdmin (SELECT)")
+	}
+
+	return account.AdminLevel(account.AdminLevel_value[level]), nil
 }
