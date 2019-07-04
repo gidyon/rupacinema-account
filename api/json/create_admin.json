@@ -1,0 +1,17 @@
+{
+    "superAdminUsername": "rupa",
+    "newAdmin": {
+        "firstName": "Gideon",
+        "lastName": "Kamau",
+        "phoneNumber": "0716484795",
+        "emailAddress": "gideonhacer@gmail.com",
+        "userName": "rupa1",
+        "level": 2,
+        "trusted_devices": []
+    },
+    "adminPrivate": {
+        "password": "hakty11",
+        "securityQuestion": "What is your Mother's name?",
+        "securityAnswer": "Rupa"
+    }
+}

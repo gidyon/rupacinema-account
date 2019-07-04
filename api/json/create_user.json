@@ -1,0 +1,17 @@
+{
+	"requestId": "001",
+	"profile": {
+		"firstName": "Max",
+		"lastName": "Masika",
+		"phoneNumber": "07164847956",
+		"emailAddress": "maxmasika94@gmail.com",
+		"profileUrl": "na",
+		"birthDate": "1994/02/03",
+		"gender": "male"
+	},
+	"privateProfile": {
+		"password": "hakty11",
+		"securityQuestion": "What is your Mother's name?",
+		"securityAnswer": "Mary"
+	}
+}
